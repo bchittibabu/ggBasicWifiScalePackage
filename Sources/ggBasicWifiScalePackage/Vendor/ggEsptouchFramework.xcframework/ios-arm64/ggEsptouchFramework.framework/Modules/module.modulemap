@@ -1,0 +1,6 @@
+framework module ggEsptouchFramework {
+  umbrella header "ggEsptouchFramework.h"
+  export *
+
+  module * { export * }
+}

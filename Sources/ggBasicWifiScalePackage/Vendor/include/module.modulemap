@@ -1,0 +1,7 @@
+module smartConfig [system] {
+    header "smartConfig.h"
+    header "ConfigByAP.h"
+    header "GCDAsyncSocket.h"
+    header "wifiSmartConnect.h"
+    export *
+}
