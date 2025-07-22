@@ -31,17 +31,7 @@ let package = Package(
                 "smartConfig"
             ],
             path: "Sources/ggBasicWifiScalePackage",
-            exclude: ["Vendor"],
-            linkerSettings: [
-                .linkedFramework("SystemConfiguration"),
-                .linkedFramework("CoreLocation"),
-                .linkedFramework("Network"),
-                .linkedFramework("Foundation"),
-                .linkedFramework("CFNetwork"),
-                .linkedLibrary("resolv"),
-                .linkedLibrary("z"),
-                .unsafeFlags(["-ObjC", "-all_load"]) // Required for proper Objective-C runtime linking and dynamic loading
-            ]
+            exclude: ["Vendor"]
         ),
         .testTarget(
             name: "ggBasicWifiScalePackageTests",

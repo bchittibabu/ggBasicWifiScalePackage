@@ -52,12 +52,15 @@ public enum WifiScaleError: Error {
     case operationFailed(code: Int, message: String)
 }
 
-@MainActor
-public class BasicWifiScale: NSObject, GGEsptouchDelegate {
-    public static let shared = BasicWifiScale()
+public class BasicWifiScale: NSObject, GGEsptouchDelegate, GCDAsyncSocketDelegate {
+    @MainActor public static let shared = BasicWifiScale()
     private override init() {}
 
     private var esptouchContinuation: CheckedContinuation<Void, Error>? = nil
+    private var smartConfigContinuation: CheckedContinuation<Void, Error>? = nil
+    private var apModeContinuation: CheckedContinuation<Void, Error>? = nil
+    private var smartConfigInstance: smartConfig?
+    private var configByAPInstance: ConfigByAP?
 
     // MARK: - Public API
     public func connect(config: WifiScaleConfig, mode: WifiScaleMode) async throws {
@@ -98,15 +101,19 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate {
     private func startSmartConfig(config: WifiScaleConfig) async throws {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let smart = smartConfig()
+                self.smartConfigInstance = smartConfig()
+                self.smartConfigContinuation = continuation
+
                 let userNumberByte: UInt8 = UInt8(config.userNumber)
                 let tokenData: Data? = config.token.isEmpty ? nil : config.token.hexDecodedData()
-                let result = smart.startSetSSID(config.ssid, andSetPassWord: config.password, andNumber: userNumberByte, andTokenData: tokenData)
-                if result == 0 {
-                    continuation.resume()
-                } else {
+                let result = self.smartConfigInstance!.startSetSSID(config.ssid, andSetPassWord: config.password, andNumber: userNumberByte, andTokenData: tokenData)
+
+                if result != 0 {
+                    self.smartConfigContinuation = nil
+                    self.smartConfigInstance = nil
                     continuation.resume(throwing: WifiScaleError.operationFailed(code: Int(result), message: "smartConfig error code: \(result)"))
                 }
+                // Don't resume here - wait for TCP connection success
             }
         }
     }
@@ -115,7 +122,9 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate {
 
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let ap = ConfigByAP()
+                self.configByAPInstance = ConfigByAP()
+                self.apModeContinuation = continuation
+
                 let userNumberValue = config.userNumber
                 let userNumberByte: UInt8 = UInt8(userNumberValue)
                 let tokenString = config.token
@@ -126,14 +135,14 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate {
                 print("config.token: \(tokenString)")
 
                 // Start AP mode configuration - this returns immediately like in iOS
-                let result = ap.startSmartConfigByAp(withSSID: config.ssid, andSetPassWord: config.password, andNumber: userNumberByte, andTokenData: tokenData)
+                let result = self.configByAPInstance!.startSmartConfigByAp(withSSID: config.ssid, andSetPassWord: config.password, andNumber: userNumberByte, andTokenData: tokenData)
 
-                if result == 0 {
-                    print("AP mode started successfully")
-                    continuation.resume()
-                } else {
+                if result != 0 {
+                    self.apModeContinuation = nil
+                    self.configByAPInstance = nil
                     continuation.resume(throwing: WifiScaleError.operationFailed(code: Int(result), message: "AP mode error code: \(result)"))
                 }
+                // Don't resume here - wait for TCP connection success
             }
         }
     }
@@ -149,6 +158,32 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate {
         esptouchContinuation?.resume(throwing: WifiScaleError.operationFailed(code: error, message: errorMessage))
         esptouchContinuation = nil
         GGEsptouchHelper.getInstance()?.clearTask()
+    }
+
+        // MARK: - GCDAsyncSocketDelegate
+    @objc public func socket(_ sock: GCDAsyncSocket, didAcceptNewSocket newSocket: GCDAsyncSocket) {
+        print("TCP connection accepted")
+        // TCP connection established successfully
+        smartConfigContinuation?.resume()
+        smartConfigContinuation = nil
+        smartConfigInstance = nil
+
+        apModeContinuation?.resume()
+        apModeContinuation = nil
+        configByAPInstance = nil
+    }
+
+    @objc public func socketDidDisconnect(_ sock: GCDAsyncSocket, withError err: Error?) {
+        print("TCP connection disconnected")
+        if let error = err {
+            smartConfigContinuation?.resume(throwing: WifiScaleError.operationFailed(code: -1, message: error.localizedDescription))
+            smartConfigContinuation = nil
+            smartConfigInstance = nil
+
+            apModeContinuation?.resume(throwing: WifiScaleError.operationFailed(code: -1, message: error.localizedDescription))
+            apModeContinuation = nil
+            configByAPInstance = nil
+        }
     }
 }
 
