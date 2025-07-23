@@ -4,38 +4,34 @@
 import PackageDescription
 
 let package = Package(
-    name: "ggBasicWifiScalePackage",
+    name: "ggWifiScalePackage",
     platforms: [
         .iOS(.v16)
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
-            name: "ggBasicWifiScalePackage",
-            targets: ["ggBasicWifiScalePackage"]),
+            name: "gWifiScalePackage",
+            targets: ["ggWifiScalePackage"]),
     ],
     targets: [
         // Use dynamic linking for frameworks to allow proper system API access
         .binaryTarget(
             name: "ggEsptouchFramework",
-            path: "Sources/ggBasicWifiScalePackage/Vendor/ggEsptouchFramework.xcframework"
+            path: "Sources/ggWifiScalePackage/Vendor/ggEsptouchFramework.xcframework"
         ),
         .binaryTarget(
             name: "smartConfig",
-            path: "Sources/ggBasicWifiScalePackage/Vendor/smartConfig.xcframework"
+            path: "Sources/ggWifiScalePackage/Vendor/smartConfig.xcframework"
         ),
         .target(
-            name: "ggBasicWifiScalePackage",
+            name: "ggWifiScalePackage",
             dependencies: [
                 "ggEsptouchFramework",
                 "smartConfig"
             ],
-            path: "Sources/ggBasicWifiScalePackage",
+            path: "Sources/ggWifiScalePackage",
             exclude: ["Vendor"]
-        ),
-        .testTarget(
-            name: "ggBasicWifiScalePackageTests",
-            dependencies: ["ggBasicWifiScalePackage"]
         ),
     ]
 )

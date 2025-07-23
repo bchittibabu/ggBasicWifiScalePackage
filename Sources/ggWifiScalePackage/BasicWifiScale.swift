@@ -72,8 +72,6 @@ public enum WifiScaleError: Error, LocalizedError {
 }
 
 public class BasicWifiScale: NSObject, GGEsptouchDelegate, GCDAsyncSocketDelegate {
-    @MainActor public static let shared = BasicWifiScale()
-
     // Logger
     private let logger = Logger(subsystem: "com.ggBasicWifiScalePackage", category: "BasicWifiScale")
 
@@ -90,7 +88,7 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate, GCDAsyncSocketDelegat
     // Timeout management
     private var timeoutTasks: [DispatchWorkItem] = []
 
-    private override init() {
+    public override init() {
         super.init()
     }
 
