@@ -106,7 +106,7 @@ public class BasicWifiScale: NSObject, GGEsptouchDelegate, GCDAsyncSocketDelegat
     /// - Throws: WifiScaleError for various failure scenarios
     public func connect(config: WifiScaleConfig, mode: WifiScaleMode, timeout: TimeInterval? = nil) async throws {
         // Validate configuration
-        guard !config.ssid.isEmpty, !config.password.isEmpty else {
+        guard !config.ssid.isEmpty else {
             throw WifiScaleError.invalidConfiguration
         }
 
